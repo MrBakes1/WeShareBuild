@@ -90,148 +90,148 @@ Resources:
         ServerSideEncryptionConfiguration:
             - ServerSideEncryptionByDefault: 
                 SSEAlgorithm: 'AES256'
-  rCodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codepipeline.amazonaws.com
-                - codebuild.amazonaws.com
-                - ecs-tasks.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Description: Permission to execute AWS CodePipeline
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
-      Policies:
-        - PolicyName: pipeline-policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: AllowS3Actions
-                Effect: 'Allow'
-                Action:
-                  - 'codecommit:UploadArchive'
-                  - 's3:PutObject'
-                  - 's3:GetObject'
-                Resource:
-                  - !Sub 'arn:aws:s3:::${rS3ArtifactBucket}'
-                  - !Sub 'arn:aws:s3:::${rS3ArtifactBucket}/*'
-              - Sid: AllowCodeBuildActions
-                Effect: 'Allow'
-                Action:
-                  - 'codebuild:StartBuild'
-                  - 'codebuild:BatchGetBuilds'
-                Resource:
-                  - '*'
-              - Sid: AllowCodeDeployActions
-                Effect: 'Allow'
-                Action:
-                  - 'ecs:*'
-                Resource:
-                  - '*'
-              - Sid: AllowCWLogsActions
-                Effect: 'Allow'
-                Action:
-                  - 'logs:CreateLogStream'
-                  - 'logs:CreateLogGroup'
-                  - 'logs:PutLogEvents'
-                Resource:
-                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:codebuild/hello-server:log-stream:*'
-  rCodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
-        Type: LINUX_CONTAINER
-        PrivilegedMode: true
-      Name: hello-server-build
-      ServiceRole: !GetAtt rCodePipelineServiceRole.Arn
-      LogsConfig: 
-         CloudWatchLogs: 
-           GroupName: codebuild/hello-server
-           Status : ENABLED 
-      Source:
-        Type: CODEPIPELINE     
+  # rCodePipelineServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - codepipeline.amazonaws.com
+  #               - codebuild.amazonaws.com
+  #               - ecs-tasks.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Description: Permission to execute AWS CodePipeline
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+  #     Policies:
+  #       - PolicyName: pipeline-policy
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Sid: AllowS3Actions
+  #               Effect: 'Allow'
+  #               Action:
+  #                 - 'codecommit:UploadArchive'
+  #                 - 's3:PutObject'
+  #                 - 's3:GetObject'
+  #               Resource:
+  #                 - !Sub 'arn:aws:s3:::${rS3ArtifactBucket}'
+  #                 - !Sub 'arn:aws:s3:::${rS3ArtifactBucket}/*'
+  #             - Sid: AllowCodeBuildActions
+  #               Effect: 'Allow'
+  #               Action:
+  #                 - 'codebuild:StartBuild'
+  #                 - 'codebuild:BatchGetBuilds'
+  #               Resource:
+  #                 - '*'
+  #             - Sid: AllowCodeDeployActions
+  #               Effect: 'Allow'
+  #               Action:
+  #                 - 'ecs:*'
+  #               Resource:
+  #                 - '*'
+  #             - Sid: AllowCWLogsActions
+  #               Effect: 'Allow'
+  #               Action:
+  #                 - 'logs:CreateLogStream'
+  #                 - 'logs:CreateLogGroup'
+  #                 - 'logs:PutLogEvents'
+  #               Resource:
+  #                 - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:codebuild/hello-server:log-stream:*'
+  # rCodeBuildProject:
+  #   Type: AWS::CodeBuild::Project
+  #   Properties:
+  #     Artifacts:
+  #       Type: CODEPIPELINE
+  #     Environment:
+  #       ComputeType: BUILD_GENERAL1_SMALL
+  #       Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+  #       Type: LINUX_CONTAINER
+  #       PrivilegedMode: true
+  #     Name: hello-server-build
+  #     ServiceRole: !GetAtt rCodePipelineServiceRole.Arn
+  #     LogsConfig: 
+  #        CloudWatchLogs: 
+  #          GroupName: codebuild/hello-server
+  #          Status : ENABLED 
+  #     Source:
+  #       Type: CODEPIPELINE     
 
-  rCodePipeline:
-    Type: AWS::CodePipeline::Pipeline
-    Properties:
-      ArtifactStore:
-        Location: !Ref rS3ArtifactBucket
-        Type: S3
-      Name: hello-server-pipeline
-      RoleArn: !GetAtt rCodePipelineServiceRole.Arn
-      Stages:
-        - Name: Source
-          Actions:
-            - ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: MrBakes1
-                Repo: WeShareBuild
-                Branch: main
-                OAuthToken: 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
-              Name: SourceAction
-              OutputArtifacts:
-                - Name: SourceOutput
-              RunOrder: 1
+  # rCodePipeline:
+  #   Type: AWS::CodePipeline::Pipeline
+  #   Properties:
+  #     ArtifactStore:
+  #       Location: !Ref rS3ArtifactBucket
+  #       Type: S3
+  #     Name: hello-server-pipeline
+  #     RoleArn: !GetAtt rCodePipelineServiceRole.Arn
+  #     Stages:
+  #       - Name: Source
+  #         Actions:
+  #           - ActionTypeId:
+  #               Category: Source
+  #               Owner: ThirdParty
+  #               Version: 1
+  #               Provider: GitHub
+  #             Configuration:
+  #               Owner: MrBakes1
+  #               Repo: WeShareBuild
+  #               Branch: main
+  #               OAuthToken: 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
+  #             Name: SourceAction
+  #             OutputArtifacts:
+  #               - Name: SourceOutput
+  #             RunOrder: 1
                 
-        - Name: Build
-          Actions:
-            - ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref rCodeBuildProject
-              InputArtifacts:
-                - Name: SourceOutput
-              Name: BuildAction
-              OutputArtifacts:
-                - Name: BuildOutput
-        - Name: Deploy
-          Actions:
-            - ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: ECS
-              Configuration:
-                ClusterName: !Sub '{{resolve:ssm:ecs-cluster-name}}'
-                ServiceName: hello-server
-              Name: DeployAction
-              InputArtifacts:
-                - Name: BuildOutput                                 
+  #       - Name: Build
+  #         Actions:
+  #           - ActionTypeId:
+  #               Category: Build
+  #               Owner: AWS
+  #               Version: 1
+  #               Provider: CodeBuild
+  #             Configuration:
+  #               ProjectName: !Ref rCodeBuildProject
+  #             InputArtifacts:
+  #               - Name: SourceOutput
+  #             Name: BuildAction
+  #             OutputArtifacts:
+  #               - Name: BuildOutput
+  #       - Name: Deploy
+  #         Actions:
+  #           - ActionTypeId:
+  #               Category: Deploy
+  #               Owner: AWS
+  #               Version: 1
+  #               Provider: ECS
+  #             Configuration:
+  #               ClusterName: !Sub '{{resolve:ssm:ecs-cluster-name}}'
+  #               ServiceName: hello-server
+  #             Name: DeployAction
+  #             InputArtifacts:
+  #               - Name: BuildOutput                                 
 
-  rECSService:
-    Type: 'AWS::ECS::Service'
-    Properties:
-      ServiceName: hello-server
-      Cluster: !Sub '{{resolve:ssm:ecs-cluster-arn}}'
-      DesiredCount: 2
-      LaunchType: EC2
-      LoadBalancers:
-        - ContainerName: hello-server
-          ContainerPort: 80
-          TargetGroupArn: !Ref rTargetGroup
-      SchedulingStrategy: REPLICA
-      HealthCheckGracePeriodSeconds: 8
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 50
-      TaskDefinition: !Ref rTaskDefinition
+  # rECSService:
+  #   Type: 'AWS::ECS::Service'
+  #   Properties:
+  #     ServiceName: hello-server
+  #     Cluster: !Sub '{{resolve:ssm:ecs-cluster-arn}}'
+  #     DesiredCount: 2
+  #     LaunchType: EC2
+  #     LoadBalancers:
+  #       - ContainerName: hello-server
+  #         ContainerPort: 80
+  #         TargetGroupArn: !Ref rTargetGroup
+  #     SchedulingStrategy: REPLICA
+  #     HealthCheckGracePeriodSeconds: 8
+  #     DeploymentConfiguration:
+  #       MaximumPercent: 200
+  #       MinimumHealthyPercent: 50
+  #     TaskDefinition: !Ref rTaskDefinition
 
 
 ###############################################################################
